@@ -67,6 +67,8 @@ export interface ActivityEvent {
   fromValue: string | null;
   toValue: string | null;
   createdAt: string;
-  user?: { name: string };
-  task?: { title: string };
+  user?: { id?: string; name: string };
+  task?: { id?: string; title: string };
+  project?: { id?: string; name: string };
 }
+
