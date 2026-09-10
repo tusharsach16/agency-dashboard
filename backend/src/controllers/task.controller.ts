@@ -7,6 +7,11 @@ import {
   assertTaskManageAccess,
   assertTaskStatusUpdateAccess,
 } from "../utils/authorization";
+import { createStatusActivityLog } from "../services/activity.service";
+import {
+  formatActivityEvent,
+  broadcastActivityEvent,
+} from "../services/activity-broadcast.service";
 
 export async function listTasks(req: Request, res: Response, next: NextFunction) {
   try {
@@ -173,14 +178,20 @@ export async function updateTask(req: Request, res: Response, next: NextFunction
     }
 
     if (user.role === Role.DEVELOPER) {
-      if (title !== undefined || description !== undefined || priority !== undefined || dueDate !== undefined || assignedToId !== undefined) {
+      if (
+        title !== undefined ||
+        description !== undefined ||
+        priority !== undefined ||
+        dueDate !== undefined ||
+        assignedToId !== undefined
+      ) {
         return next(ApiError.forbidden("Developers can only update task status"));
       }
 
       assertTaskStatusUpdateAccess(user, existingTask);
 
       if (status !== undefined && status !== existingTask.status) {
-        const updatedTask = await prisma.$transaction(async (tx) => {
+        const { updatedTask, log } = await prisma.$transaction(async (tx) => {
           const t = await tx.task.update({
             where: { id },
             data: { status },
@@ -190,19 +201,19 @@ export async function updateTask(req: Request, res: Response, next: NextFunction
             },
           });
 
-          await tx.activityLog.create({
-            data: {
-              taskId: id,
-              projectId: existingTask.projectId,
-              userId: user.sub,
-              field: "status",
-              fromValue: existingTask.status,
-              toValue: status,
-            },
+          const createdLog = await createStatusActivityLog(tx, {
+            taskId: id,
+            projectId: existingTask.projectId,
+            userId: user.sub,
+            fromValue: existingTask.status,
+            toValue: status,
           });
 
-          return t;
+          return { updatedTask: t, log: createdLog };
         });
+
+        const event = formatActivityEvent(log);
+        broadcastActivityEvent(existingTask.projectId, event);
 
         return res.json({ success: true, task: updatedTask });
       }
@@ -250,7 +261,7 @@ export async function updateTask(req: Request, res: Response, next: NextFunction
     }
 
     if (status !== undefined && status !== existingTask.status) {
-      const updatedTask = await prisma.$transaction(async (tx) => {
+      const { updatedTask, log } = await prisma.$transaction(async (tx) => {
         const t = await tx.task.update({
           where: { id },
           data,
@@ -260,19 +271,19 @@ export async function updateTask(req: Request, res: Response, next: NextFunction
           },
         });
 
-        await tx.activityLog.create({
-          data: {
-            taskId: id,
-            projectId: existingTask.projectId,
-            userId: user.sub,
-            field: "status",
-            fromValue: existingTask.status,
-            toValue: status,
-          },
+        const createdLog = await createStatusActivityLog(tx, {
+          taskId: id,
+          projectId: existingTask.projectId,
+          userId: user.sub,
+          fromValue: existingTask.status,
+          toValue: status,
         });
 
-        return t;
+        return { updatedTask: t, log: createdLog };
       });
+
+      const event = formatActivityEvent(log);
+      broadcastActivityEvent(existingTask.projectId, event);
 
       return res.json({ success: true, task: updatedTask });
     }
@@ -315,7 +326,7 @@ export async function updateTaskStatus(req: Request, res: Response, next: NextFu
       return res.json({ success: true, task: existingTask });
     }
 
-    const updatedTask = await prisma.$transaction(async (tx) => {
+    const { updatedTask, log } = await prisma.$transaction(async (tx) => {
       const t = await tx.task.update({
         where: { id },
         data: { status },
@@ -325,19 +336,19 @@ export async function updateTaskStatus(req: Request, res: Response, next: NextFu
         },
       });
 
-      await tx.activityLog.create({
-        data: {
-          taskId: id,
-          projectId: existingTask.projectId,
-          userId: user.sub,
-          field: "status",
-          fromValue: existingTask.status,
-          toValue: status,
-        },
+      const createdLog = await createStatusActivityLog(tx, {
+        taskId: id,
+        projectId: existingTask.projectId,
+        userId: user.sub,
+        fromValue: existingTask.status,
+        toValue: status,
       });
 
-      return t;
+      return { updatedTask: t, log: createdLog };
     });
+
+    const event = formatActivityEvent(log);
+    broadcastActivityEvent(existingTask.projectId, event);
 
     res.json({ success: true, task: updatedTask });
   } catch (err) {
