@@ -4,6 +4,7 @@ import { AuthUser } from "../types";
 
 interface AuthContextValue {
   user: AuthUser | null;
+  token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, role?: string) => Promise<void>;
@@ -14,6 +15,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
@@ -22,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const res = await api.post("/auth/refresh");
         if (res.data?.accessToken) {
           setAccessToken(res.data.accessToken);
+          setToken(res.data.accessToken);
           if (res.data.user) {
             setUser(res.data.user);
           } else {
@@ -31,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch {
         setAccessToken(null);
+        setToken(null);
         setUser(null);
       } finally {
         setLoading(false);
@@ -43,12 +47,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function register(name: string, email: string, password: string, role?: string) {
     const res = await api.post("/auth/register", { name, email, password, role });
     setAccessToken(res.data.accessToken);
+    setToken(res.data.accessToken);
     setUser(res.data.user);
   }
 
   async function login(email: string, password: string) {
     const res = await api.post("/auth/login", { email, password });
     setAccessToken(res.data.accessToken);
+    setToken(res.data.accessToken);
     setUser(res.data.user);
   }
 
@@ -57,12 +63,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await api.post("/auth/logout");
     } finally {
       setAccessToken(null);
+      setToken(null);
       setUser(null);
     }
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

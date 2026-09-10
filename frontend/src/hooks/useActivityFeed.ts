@@ -1,38 +1,112 @@
 import { useEffect, useRef, useState } from "react";
-import { io, Socket } from "socket.io-client";
+import { Socket } from "socket.io-client";
 import { ActivityEvent } from "../types";
+import { api } from "../services/api";
+import { createFeedSocket } from "../services/socket";
+import { useAuth } from "../context/AuthContext";
 
-export function useActivityFeed(accessToken: string | null) {
+export function useActivityFeed(
+  projectId?: string | null,
+  onActivity?: (event: ActivityEvent) => void
+) {
+  const { token } = useAuth();
   const [events, setEvents] = useState<ActivityEvent[]>([]);
-  const [onlineCount, setOnlineCount] = useState(0);
+  const [connected, setConnected] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  const onActivityRef = useRef(onActivity);
+  onActivityRef.current = onActivity;
 
   useEffect(() => {
-    if (!accessToken) return;
+    let isMounted = true;
 
-    const socket = io("/", { auth: { token: accessToken } });
+    if (!token) {
+      setConnected(false);
+      setLoading(false);
+      return;
+    }
+
+    async function loadCatchup() {
+      try {
+        setLoading(true);
+        const url = projectId ? `/activity?projectId=${projectId}` : "/activity";
+        const res = await api.get(url);
+        if (isMounted) {
+          setEvents(res.data.activities ?? []);
+          setError(null);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setError(err?.response?.data?.error?.message || "Failed to load activity history");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadCatchup();
+
+    const socket = createFeedSocket(token);
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      socket.emit("feed:catchup");
-    });
+      if (isMounted) {
+        setConnected(true);
+        setError(null);
+      }
 
-    socket.on("feed:catchup:result", (missed: ActivityEvent[]) => {
-      setEvents((prev) => [...missed.reverse(), ...prev]);
+      if (projectId) {
+        socket.emit(
+          "feed:subscribe:project",
+          { projectId },
+          (res?: { success: boolean; error?: string }) => {
+            if (res && !res.success && isMounted) {
+              setError(res.error || "Failed to subscribe to project feed");
+            }
+          }
+        );
+      }
     });
 
     socket.on("feed:new", (event: ActivityEvent) => {
-      setEvents((prev) => [event, ...prev]);
+      if (!isMounted) return;
+      if (projectId && event.projectId !== projectId) return;
+
+      setEvents((prev) => {
+        if (prev.some((e) => e.id === event.id)) {
+          return prev;
+        }
+        return [event, ...prev];
+      });
+
+      onActivityRef.current?.(event);
     });
 
-    socket.on("presence:count", ({ count }: { count: number }) => {
-      setOnlineCount(count);
+    socket.on("disconnect", () => {
+      if (isMounted) {
+        setConnected(false);
+      }
+    });
+
+    socket.on("connect_error", (err) => {
+      if (isMounted) {
+        setConnected(false);
+        setError(err.message || "WebSocket connection error");
+      }
     });
 
     return () => {
+      isMounted = false;
+      if (projectId) {
+        socket.emit("feed:unsubscribe:project", { projectId });
+      }
       socket.disconnect();
+      socketRef.current = null;
     };
-  }, [accessToken]);
+  }, [projectId, token]);
 
-  return { events, onlineCount };
+  return { events, connected, loading, error };
 }
