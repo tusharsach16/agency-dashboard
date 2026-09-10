@@ -5,6 +5,7 @@ import userRoutes from "./user.routes";
 import clientRoutes from "./client.routes";
 import taskRoutes from "./task.routes";
 import activityRoutes from "./activity.routes";
+import dashboardRoutes from "./dashboard.routes";
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use("/users", userRoutes);
 router.use("/clients", clientRoutes);
 router.use("/tasks", taskRoutes);
 router.use("/activity", activityRoutes);
+router.use("/dashboard", dashboardRoutes);
 
 export default router;
