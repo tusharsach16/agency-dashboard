@@ -7,6 +7,8 @@ export async function joinUserRooms(socket: AuthedSocket): Promise<void> {
   const user = socket.user;
   if (!user) return;
 
+  socket.join(`user:${user.sub}`);
+
   try {
     if (user.role === Role.ADMIN) {
       socket.join("feed:global");
