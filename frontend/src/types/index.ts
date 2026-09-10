@@ -100,3 +100,24 @@ export interface DashboardFilterParams {
   projectId?: string | "";
   assignedToId?: string | "";
 }
+
+export interface NotificationItem {
+  id: string;
+  userId: string;
+  taskId: string | null;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+  task?: {
+    id: string;
+    title: string;
+    projectId: string;
+  } | null;
+}
+
+export interface NotificationsResponse {
+  success: boolean;
+  notifications: NotificationItem[];
+  unreadCount: number;
+}
+

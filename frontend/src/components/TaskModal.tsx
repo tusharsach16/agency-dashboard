@@ -30,10 +30,15 @@ export function TaskModal({ projectId, task, onClose, onSave }: TaskModalProps) 
     async function loadDevelopers() {
       if (user?.role === "ADMIN" || user?.role === "PM") {
         try {
-          const res = await api.get("/users?role=DEVELOPER");
-          setDevelopers(res.data.users ?? []);
+          const res = await api.get("/users/developers");
+          setDevelopers(res.data.developers ?? res.data.users ?? []);
         } catch {
-          setError("Failed to load developers");
+          try {
+            const fallback = await api.get("/users?role=DEVELOPER");
+            setDevelopers(fallback.data.developers ?? fallback.data.users ?? []);
+          } catch {
+            setError("Failed to load developers");
+          }
         }
       }
     }
