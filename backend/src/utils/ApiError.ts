@@ -1,26 +1,32 @@
 export class ApiError extends Error {
   statusCode: number;
+  code: string;
   details?: unknown;
 
-  constructor(statusCode: number, message: string, details?: unknown) {
+  constructor(statusCode: number, code: string, message: string, details?: unknown) {
     super(message);
     this.statusCode = statusCode;
+    this.code = code;
     this.details = details;
   }
 
   static badRequest(message: string, details?: unknown) {
-    return new ApiError(400, message, details);
+    return new ApiError(400, "BAD_REQUEST", message, details);
   }
 
-  static unauthorized(message = "Unauthorized") {
-    return new ApiError(401, message);
+  static unauthorized(message = "Authentication required", details?: unknown) {
+    return new ApiError(401, "UNAUTHORIZED", message, details);
   }
 
-  static forbidden(message = "Forbidden") {
-    return new ApiError(403, message);
+  static forbidden(message = "You do not have permission to access this resource", details?: unknown) {
+    return new ApiError(403, "FORBIDDEN", message, details);
   }
 
-  static notFound(message = "Not found") {
-    return new ApiError(404, message);
+  static notFound(message = "Resource not found", details?: unknown) {
+    return new ApiError(404, "NOT_FOUND", message, details);
+  }
+
+  static internal(message = "Internal server error", details?: unknown) {
+    return new ApiError(500, "INTERNAL_SERVER_ERROR", message, details);
   }
 }

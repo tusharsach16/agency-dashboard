@@ -43,6 +43,7 @@ export async function login(req: Request, res: Response, next: NextFunction) {
     res.cookie(REFRESH_COOKIE_NAME, refreshToken, cookieOptions);
 
     res.json({
+      success: true,
       accessToken,
       user: { id: user.id, name: user.name, email: user.email, role: user.role },
     });
@@ -64,13 +65,20 @@ export async function refresh(req: Request, res: Response, next: NextFunction) {
     }
 
     const payload = verifyRefreshToken(token);
-    const user = await prisma.user.findUnique({ where: { id: payload.sub } });
+    const user = await prisma.user.findUnique({
+      where: { id: payload.sub },
+      select: { id: true, name: true, email: true, role: true },
+    });
     if (!user) {
-      return next(ApiError.unauthorized());
+      return next(ApiError.unauthorized("User not found"));
     }
 
     const accessToken = signAccessToken(user.id, user.role);
-    res.json({ accessToken });
+    res.json({
+      success: true,
+      accessToken,
+      user,
+    });
   } catch {
     next(ApiError.unauthorized("Invalid refresh token"));
   }
@@ -83,7 +91,28 @@ export async function logout(req: Request, res: Response, next: NextFunction) {
       await prisma.refreshToken.deleteMany({ where: { token } });
     }
     res.clearCookie(REFRESH_COOKIE_NAME, { path: "/api/auth" });
-    res.status(204).send();
+    res.json({ success: true, message: "Logged out successfully" });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function me(req: Request, res: Response, next: NextFunction) {
+  try {
+    const currentUserId = req.user!.sub;
+    const user = await prisma.user.findUnique({
+      where: { id: currentUserId },
+      select: { id: true, name: true, email: true, role: true, createdAt: true },
+    });
+
+    if (!user) {
+      return next(ApiError.unauthorized("User not found"));
+    }
+
+    res.json({
+      success: true,
+      user,
+    });
   } catch (err) {
     next(err);
   }

@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { Role } from "@prisma/client";
 import { prisma } from "../config/prisma";
 import { ApiError } from "../utils/ApiError";
+import { assertProjectAccess } from "../utils/authorization";
 
 export async function listProjects(req: Request, res: Response, next: NextFunction) {
   try {
@@ -20,7 +21,7 @@ export async function listProjects(req: Request, res: Response, next: NextFuncti
       orderBy: { createdAt: "desc" },
     });
 
-    res.json({ projects });
+    res.json({ success: true, projects });
   } catch (err) {
     next(err);
   }
@@ -40,16 +41,9 @@ export async function getProject(req: Request, res: Response, next: NextFunction
       return next(ApiError.notFound("Project not found"));
     }
 
-    const isOwnerPM = user.role === Role.PM && project.managerId === user.sub;
-    const isAssignedDeveloper =
-      user.role === Role.DEVELOPER &&
-      project.tasks.some((t) => t.assignedToId === user.sub);
+    assertProjectAccess(user, project);
 
-    if (user.role !== Role.ADMIN && !isOwnerPM && !isAssignedDeveloper) {
-      return next(ApiError.forbidden());
-    }
-
-    res.json({ project });
+    res.json({ success: true, project });
   } catch (err) {
     next(err);
   }
@@ -60,6 +54,11 @@ export async function createProject(req: Request, res: Response, next: NextFunct
     const user = req.user!;
     const { name, description, clientId } = req.body;
 
+    const client = await prisma.client.findUnique({ where: { id: clientId } });
+    if (!client) {
+      return next(ApiError.badRequest("Invalid clientId"));
+    }
+
     const project = await prisma.project.create({
       data: {
         name,
@@ -69,7 +68,7 @@ export async function createProject(req: Request, res: Response, next: NextFunct
       },
     });
 
-    res.status(201).json({ project });
+    res.status(201).json({ success: true, project });
   } catch (err) {
     next(err);
   }
