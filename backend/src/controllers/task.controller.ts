@@ -12,6 +12,12 @@ import {
   formatActivityEvent,
   broadcastActivityEvent,
 } from "../services/activity-broadcast.service";
+import {
+  createAssignmentNotification,
+  createStatusChangeNotification,
+  broadcastTaskNotifications,
+} from "../services/task-notification.service";
+import { NotificationPayload } from "../types/notification";
 
 export async function listTasks(req: Request, res: Response, next: NextFunction) {
   try {
@@ -134,25 +140,40 @@ export async function createTask(req: Request, res: Response, next: NextFunction
       }
     }
 
-    const task = await prisma.task.create({
-      data: {
-        title,
-        description: description ?? null,
-        projectId,
-        assignedToId: assignedToId ?? null,
-        status: status ?? TaskStatus.TODO,
-        priority: priority ?? TaskPriority.MEDIUM,
-        dueDate: parsedDueDate,
-      },
-      include: {
-        project: {
-          select: { id: true, name: true },
+    const { task, notification } = await prisma.$transaction(async (tx) => {
+      const created = await tx.task.create({
+        data: {
+          title,
+          description: description ?? null,
+          projectId,
+          assignedToId: assignedToId ?? null,
+          status: status ?? TaskStatus.TODO,
+          priority: priority ?? TaskPriority.MEDIUM,
+          dueDate: parsedDueDate,
         },
-        assignedTo: {
-          select: { id: true, name: true, email: true },
+        include: {
+          project: {
+            select: { id: true, name: true },
+          },
+          assignedTo: {
+            select: { id: true, name: true, email: true },
+          },
         },
-      },
+      });
+
+      const notif = await createAssignmentNotification(tx, {
+        assigneeId: assignedToId,
+        taskId: created.id,
+        taskTitle: created.title,
+        actorId: user.sub,
+      });
+
+      return { task: created, notification: notif };
     });
+
+    if (notification) {
+      await broadcastTaskNotifications([notification]);
+    }
 
     res.status(201).json({ success: true, task });
   } catch (err) {
@@ -191,7 +212,7 @@ export async function updateTask(req: Request, res: Response, next: NextFunction
       assertTaskStatusUpdateAccess(user, existingTask);
 
       if (status !== undefined && status !== existingTask.status) {
-        const { updatedTask, log } = await prisma.$transaction(async (tx) => {
+        const { updatedTask, log, notification } = await prisma.$transaction(async (tx) => {
           const t = await tx.task.update({
             where: { id },
             data: { status },
@@ -209,11 +230,23 @@ export async function updateTask(req: Request, res: Response, next: NextFunction
             toValue: status,
           });
 
-          return { updatedTask: t, log: createdLog };
+          const notif = await createStatusChangeNotification(tx, {
+            recipientId: existingTask.project.managerId,
+            taskId: id,
+            taskTitle: t.title,
+            status,
+            actorId: user.sub,
+          });
+
+          return { updatedTask: t, log: createdLog, notification: notif };
         });
 
         const event = formatActivityEvent(log);
         broadcastActivityEvent(existingTask.projectId, event);
+
+        if (notification) {
+          await broadcastTaskNotifications([notification]);
+        }
 
         return res.json({ success: true, task: updatedTask });
       }
@@ -260,42 +293,71 @@ export async function updateTask(req: Request, res: Response, next: NextFunction
       data.status = status;
     }
 
-    if (status !== undefined && status !== existingTask.status) {
-      const { updatedTask, log } = await prisma.$transaction(async (tx) => {
-        const t = await tx.task.update({
-          where: { id },
-          data,
-          include: {
-            project: { select: { id: true, name: true } },
-            assignedTo: { select: { id: true, name: true, email: true } },
-          },
-        });
+    const isStatusChanged = status !== undefined && status !== existingTask.status;
+    const isAssigneeChanged =
+      assignedToId !== undefined &&
+      assignedToId !== existingTask.assignedToId &&
+      assignedToId !== null &&
+      assignedToId !== user.sub;
 
-        const createdLog = await createStatusActivityLog(tx, {
+    const { updatedTask, log, notifications } = await prisma.$transaction(async (tx) => {
+      const t = await tx.task.update({
+        where: { id },
+        data,
+        include: {
+          project: { select: { id: true, name: true } },
+          assignedTo: { select: { id: true, name: true, email: true } },
+        },
+      });
+
+      let createdLog = null;
+      if (isStatusChanged) {
+        createdLog = await createStatusActivityLog(tx, {
           taskId: id,
           projectId: existingTask.projectId,
           userId: user.sub,
           fromValue: existingTask.status,
           toValue: status,
         });
+      }
 
-        return { updatedTask: t, log: createdLog };
-      });
+      const generatedNotifs: (NotificationPayload | null)[] = [];
 
+      if (isAssigneeChanged && assignedToId) {
+        const assignNotif = await createAssignmentNotification(tx, {
+          assigneeId: assignedToId,
+          taskId: id,
+          taskTitle: t.title,
+          actorId: user.sub,
+        });
+        if (assignNotif) generatedNotifs.push(assignNotif);
+      }
+
+      if (isStatusChanged) {
+        const targetAssigneeId = assignedToId !== undefined ? assignedToId : existingTask.assignedToId;
+        if (targetAssigneeId && targetAssigneeId !== user.sub && targetAssigneeId !== assignedToId) {
+          const statusNotif = await createStatusChangeNotification(tx, {
+            recipientId: targetAssigneeId,
+            taskId: id,
+            taskTitle: t.title,
+            status,
+            actorId: user.sub,
+          });
+          if (statusNotif) generatedNotifs.push(statusNotif);
+        }
+      }
+
+      return { updatedTask: t, log: createdLog, notifications: generatedNotifs };
+    });
+
+    if (log) {
       const event = formatActivityEvent(log);
       broadcastActivityEvent(existingTask.projectId, event);
-
-      return res.json({ success: true, task: updatedTask });
     }
 
-    const updatedTask = await prisma.task.update({
-      where: { id },
-      data,
-      include: {
-        project: { select: { id: true, name: true } },
-        assignedTo: { select: { id: true, name: true, email: true } },
-      },
-    });
+    if (notifications.length > 0) {
+      await broadcastTaskNotifications(notifications);
+    }
 
     res.json({ success: true, task: updatedTask });
   } catch (err) {
@@ -326,7 +388,7 @@ export async function updateTaskStatus(req: Request, res: Response, next: NextFu
       return res.json({ success: true, task: existingTask });
     }
 
-    const { updatedTask, log } = await prisma.$transaction(async (tx) => {
+    const { updatedTask, log, notification } = await prisma.$transaction(async (tx) => {
       const t = await tx.task.update({
         where: { id },
         data: { status },
@@ -344,11 +406,36 @@ export async function updateTaskStatus(req: Request, res: Response, next: NextFu
         toValue: status,
       });
 
-      return { updatedTask: t, log: createdLog };
+      let notif: NotificationPayload | null = null;
+      if (user.role === Role.DEVELOPER) {
+        notif = await createStatusChangeNotification(tx, {
+          recipientId: existingTask.project.managerId,
+          taskId: id,
+          taskTitle: t.title,
+          status,
+          actorId: user.sub,
+        });
+      } else {
+        if (existingTask.assignedToId) {
+          notif = await createStatusChangeNotification(tx, {
+            recipientId: existingTask.assignedToId,
+            taskId: id,
+            taskTitle: t.title,
+            status,
+            actorId: user.sub,
+          });
+        }
+      }
+
+      return { updatedTask: t, log: createdLog, notification: notif };
     });
 
     const event = formatActivityEvent(log);
     broadcastActivityEvent(existingTask.projectId, event);
+
+    if (notification) {
+      await broadcastTaskNotifications([notification]);
+    }
 
     res.json({ success: true, task: updatedTask });
   } catch (err) {

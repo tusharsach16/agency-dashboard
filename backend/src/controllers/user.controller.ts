@@ -4,6 +4,28 @@ import { Role } from "@prisma/client";
 import { prisma } from "../config/prisma";
 import { ApiError } from "../utils/ApiError";
 
+export async function listDevelopers(req: Request, res: Response, next: NextFunction) {
+  try {
+    const developers = await prisma.user.findMany({
+      where: { role: Role.DEVELOPER },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+      },
+      orderBy: { name: "asc" },
+    });
+
+    res.json({
+      success: true,
+      developers,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function listUsers(req: Request, res: Response, next: NextFunction) {
   try {
     const role = req.query.role as Role | undefined;
