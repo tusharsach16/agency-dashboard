@@ -9,25 +9,53 @@ export interface AuthUser {
   role: Role;
 }
 
+export interface Client {
+  id: string;
+  name: string;
+  contact?: string | null;
+  createdAt?: string;
+}
+
+export interface UserSummary {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+}
+
 export interface Project {
   id: string;
   name: string;
-  description?: string;
+  description?: string | null;
   clientId: string;
+  client?: Client;
   managerId: string;
+  manager?: UserSummary;
+  tasks?: Task[];
+  _count?: {
+    tasks: number;
+  };
   createdAt: string;
 }
 
 export interface Task {
   id: string;
   title: string;
-  description?: string;
+  description?: string | null;
   status: TaskStatus;
   priority: TaskPriority;
-  dueDate?: string;
-  isOverdue: boolean;
+  dueDate?: string | null;
+  isOverdue?: boolean;
   projectId: string;
-  assignedToId?: string;
+  project?: {
+    id: string;
+    name: string;
+    managerId?: string;
+  };
+  assignedToId?: string | null;
+  assignedTo?: UserSummary | null;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface ActivityEvent {

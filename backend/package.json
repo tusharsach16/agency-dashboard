@@ -7,7 +7,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
-    "test": "tsx src/tests/auth.test.ts",
+    "test": "tsx src/tests/auth.test.ts && tsx src/tests/project-task.test.ts",
     "start": "node dist/server.js",
     "seed": "tsx prisma/seed.ts",
     "prisma:generate": "prisma generate",

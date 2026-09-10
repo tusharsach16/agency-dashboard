@@ -15,6 +15,48 @@ const cookieOptions = {
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
+export async function register(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { name, email, password, role = "DEVELOPER" } = req.body;
+
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return next(ApiError.badRequest("User with this email already exists"));
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+    const user = await prisma.user.create({
+      data: {
+        name,
+        email,
+        passwordHash,
+        role,
+      },
+    });
+
+    const accessToken = signAccessToken(user.id, user.role);
+    const refreshToken = signRefreshToken(user.id);
+
+    await prisma.refreshToken.create({
+      data: {
+        token: refreshToken,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    res.cookie(REFRESH_COOKIE_NAME, refreshToken, cookieOptions);
+
+    res.status(201).json({
+      success: true,
+      accessToken,
+      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 export async function login(req: Request, res: Response, next: NextFunction) {
   try {
     const { email, password } = req.body;

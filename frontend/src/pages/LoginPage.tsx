@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage() {
@@ -40,6 +40,12 @@ export default function LoginPage() {
         />
         {error && <p className="error">{error}</p>}
         <button type="submit">Log in</button>
+        <p style={{ marginTop: "16px", fontSize: "14px", color: "#6b7280" }}>
+          Don't have an account?{" "}
+          <Link to="/signup" style={{ color: "#2563eb", textDecoration: "none", fontWeight: 600 }}>
+            Sign up
+          </Link>
+        </p>
       </form>
     </div>
   );
