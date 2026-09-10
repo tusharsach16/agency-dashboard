@@ -1,4 +1,5 @@
 import { useAuth } from "../context/AuthContext";
+import { NotificationBell } from "./NotificationBell";
 
 export function Navbar() {
   const { user, logout } = useAuth();
@@ -9,6 +10,7 @@ export function Navbar() {
         <h2>Agency Dashboard</h2>
       </div>
       <div className="navbar-user">
+        <NotificationBell />
         <span className="user-name">{user?.name}</span>
         <span className={`role-badge role-${user?.role?.toLowerCase()}`}>
           {user?.role}

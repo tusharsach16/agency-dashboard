@@ -81,13 +81,18 @@ export default function DashboardPage() {
       if (canManageProjects) {
         try {
           const res = await api.get("/users/developers");
-          setDevelopers(res.data.developers ?? []);
+          setDevelopers(res.data.developers ?? res.data.users ?? []);
         } catch {
+          try {
+            const fallback = await api.get("/users?role=DEVELOPER");
+            setDevelopers(fallback.data.developers ?? fallback.data.users ?? []);
+          } catch {
+          }
         }
       }
     }
     loadDevelopers();
-  }, [canManageProjects]);
+  }, [canManageProjects, user]);
 
   async function handleDeleteProject(id: string) {
     if (!window.confirm("Are you sure you want to delete this project?")) return;

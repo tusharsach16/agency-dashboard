@@ -88,7 +88,7 @@ export function DashboardFilters({
           </div>
         )}
 
-        {!isDeveloper && developers.length > 0 && (
+        {!isDeveloper && (
           <div className="filter-item">
             <label>Assignee</label>
             <select
