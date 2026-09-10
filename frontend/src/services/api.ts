@@ -6,6 +6,10 @@ export function setAccessToken(token: string | null) {
   accessToken = token;
 }
 
+export function getAccessToken(): string | null {
+  return accessToken;
+}
+
 export const api = axios.create({
   baseURL: "/api",
   withCredentials: true,
@@ -24,7 +28,12 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config;
-    if (error.response?.status === 401 && !original._retry) {
+    if (
+      error.response?.status === 401 &&
+      !original._retry &&
+      !original.url?.includes("/auth/login") &&
+      !original.url?.includes("/auth/refresh")
+    ) {
       original._retry = true;
 
       if (!refreshPromise) {
@@ -35,14 +44,22 @@ api.interceptors.response.use(
             setAccessToken(token);
             return token;
           })
+          .catch((refreshError) => {
+            setAccessToken(null);
+            throw refreshError;
+          })
           .finally(() => {
             refreshPromise = null;
           });
       }
 
-      const newToken = await refreshPromise;
-      original.headers.Authorization = `Bearer ${newToken}`;
-      return api(original);
+      try {
+        const newToken = await refreshPromise;
+        original.headers.Authorization = `Bearer ${newToken}`;
+        return api(original);
+      } catch (err) {
+        return Promise.reject(err);
+      }
     }
     return Promise.reject(error);
   }

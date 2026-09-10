@@ -1,9 +1,10 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { api, setAccessToken } from "../services/api";
 import { AuthUser } from "../types";
 
 interface AuthContextValue {
   user: AuthUser | null;
+  loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -12,6 +13,31 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    async function initAuth() {
+      try {
+        const res = await api.post("/auth/refresh");
+        if (res.data?.accessToken) {
+          setAccessToken(res.data.accessToken);
+          if (res.data.user) {
+            setUser(res.data.user);
+          } else {
+            const meRes = await api.get("/auth/me");
+            setUser(meRes.data.user);
+          }
+        }
+      } catch {
+        setAccessToken(null);
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    initAuth();
+  }, []);
 
   async function login(email: string, password: string) {
     const res = await api.post("/auth/login", { email, password });
@@ -20,13 +46,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function logout() {
-    await api.post("/auth/logout");
-    setAccessToken(null);
-    setUser(null);
+    try {
+      await api.post("/auth/logout");
+    } finally {
+      setAccessToken(null);
+      setUser(null);
+    }
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
