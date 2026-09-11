@@ -87,54 +87,67 @@ export function TaskModal({ projectId, task, onClose, onSave }: TaskModalProps) 
   }
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content">
-        <div className="modal-header">
-          <h3>
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-card-light dark:bg-card-dark border border-black/10 dark:border-white/10 rounded-2xl shadow-soft-light dark:shadow-soft-dark max-w-lg w-full p-6 sm:p-7 relative animate-slide-down">
+        <div className="flex items-center justify-between pb-4 mb-5 border-b border-black/10 dark:border-white/10">
+          <h3 className="font-heading font-bold text-lg text-slate-900 dark:text-white">
             {isDeveloper
               ? "Update Task Status"
               : task
               ? "Edit Task"
               : "Create New Task"}
           </h3>
-          <button className="btn-close" onClick={onClose}>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-black/5 dark:hover:bg-white/5 transition-all text-lg"
+          >
             &times;
           </button>
         </div>
 
-        {error && <div className="alert alert-danger">{error}</div>}
+        {error && (
+          <div className="mb-4 p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+            <span>{error}</span>
+          </div>
+        )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="space-y-4">
           {!isDeveloper ? (
             <>
-              <div className="form-group">
-                <label>Task Title *</label>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1.5 font-heading">
+                  Task Title *
+                </label>
                 <input
                   type="text"
                   required
-                  className="form-control"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.04] border border-black/10 dark:border-white/10 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all placeholder-slate-400"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Implement user authentication"
                 />
               </div>
 
-              <div className="form-group">
-                <label>Description</label>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1.5 font-heading">
+                  Description
+                </label>
                 <textarea
-                  className="form-control"
                   rows={3}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.04] border border-black/10 dark:border-white/10 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all placeholder-slate-400"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Task details and acceptance criteria"
                 />
               </div>
 
-              <div className="form-row">
-                <div className="form-group flex-1">
-                  <label>Priority</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1.5 font-heading">
+                    Priority
+                  </label>
                   <select
-                    className="form-control"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.02] dark:bg-card-darkHover border border-black/10 dark:border-white/10 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all cursor-pointer"
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as TaskPriority)}
                   >
@@ -145,10 +158,12 @@ export function TaskModal({ projectId, task, onClose, onSave }: TaskModalProps) 
                   </select>
                 </div>
 
-                <div className="form-group flex-1">
-                  <label>Status</label>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1.5 font-heading">
+                    Status
+                  </label>
                   <select
-                    className="form-control"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.02] dark:bg-card-darkHover border border-black/10 dark:border-white/10 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all cursor-pointer"
                     value={status}
                     onChange={(e) => setStatus(e.target.value as TaskStatus)}
                   >
@@ -160,21 +175,25 @@ export function TaskModal({ projectId, task, onClose, onSave }: TaskModalProps) 
                 </div>
               </div>
 
-              <div className="form-row">
-                <div className="form-group flex-1">
-                  <label>Due Date</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1.5 font-heading">
+                    Due Date
+                  </label>
                   <input
                     type="date"
-                    className="form-control"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.04] border border-black/10 dark:border-white/10 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all cursor-pointer"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
                   />
                 </div>
 
-                <div className="form-group flex-1">
-                  <label>Assign Developer</label>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1.5 font-heading">
+                    Assign Developer
+                  </label>
                   <select
-                    className="form-control"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.02] dark:bg-card-darkHover border border-black/10 dark:border-white/10 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all cursor-pointer"
                     value={assignedToId}
                     onChange={(e) => setAssignedToId(e.target.value)}
                   >
@@ -189,12 +208,22 @@ export function TaskModal({ projectId, task, onClose, onSave }: TaskModalProps) 
               </div>
             </>
           ) : (
-            <div className="form-group">
-              <label>Task: {task?.title}</label>
-              <div className="form-group mt-2">
-                <label>Status</label>
+            <div>
+              <div className="p-3.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/10 dark:border-white/10 mb-4">
+                <span className="text-xs text-slate-500 dark:text-slate-400 block mb-1 font-heading uppercase tracking-wider">
+                  Task
+                </span>
+                <strong className="text-sm text-slate-900 dark:text-white block font-medium">
+                  {task?.title}
+                </strong>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1.5 font-heading">
+                  Status
+                </label>
                 <select
-                  className="form-control"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-black/[0.02] dark:bg-card-darkHover border border-black/10 dark:border-white/10 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all cursor-pointer"
                   value={status}
                   onChange={(e) => setStatus(e.target.value as TaskStatus)}
                 >
@@ -207,16 +236,20 @@ export function TaskModal({ projectId, task, onClose, onSave }: TaskModalProps) 
             </div>
           )}
 
-          <div className="modal-actions">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-black/10 dark:border-white/10">
             <button
               type="button"
-              className="btn btn-secondary"
+              className="px-4 py-2.5 rounded-xl border border-black/10 dark:border-white/10 text-slate-700 dark:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5 text-sm font-medium transition-all"
               onClick={onClose}
               disabled={loading}
             >
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary" disabled={loading}>
+            <button
+              type="submit"
+              className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-medium text-sm shadow-glow-amber transition-all disabled:opacity-50 font-heading"
+              disabled={loading}
+            >
               {loading ? "Saving..." : task ? "Save Changes" : "Create Task"}
             </button>
           </div>

@@ -34,19 +34,24 @@ export function NotificationBell() {
   }, [isOpen]);
 
   return (
-    <div className="notification-bell-container" ref={containerRef}>
+    <div className="relative" ref={containerRef}>
       <button
-        className={`notification-bell-btn ${isOpen ? "active" : ""}`}
         onClick={() => setIsOpen((prev) => !prev)}
         aria-label="Notifications"
         type="button"
+        className={`relative w-9 h-9 rounded-xl flex items-center justify-center border transition-all ${
+          isOpen
+            ? "bg-amber-500/10 border-amber-500 text-amber-500"
+            : "bg-black/[0.03] dark:bg-white/[0.04] border-black/10 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-black/[0.06] dark:hover:bg-white/[0.08]"
+        }`}
       >
         <svg
-          className="bell-icon"
+          className="w-4.5 h-4.5"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
+          width="18"
+          height="18"
         >
           <path
             strokeLinecap="round"
@@ -56,7 +61,7 @@ export function NotificationBell() {
           />
         </svg>
         {unreadCount > 0 && (
-          <span className="unread-counter-badge">
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-glow-amber animate-pulse font-heading">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
