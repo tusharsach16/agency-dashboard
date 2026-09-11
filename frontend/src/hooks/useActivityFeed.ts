@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Socket } from "socket.io-client";
 import { ActivityEvent } from "../types";
 import { api } from "../services/api";
-import { createFeedSocket } from "../services/socket";
+import { getFeedSocket, releaseFeedSocket } from "../services/socket";
 import { useAuth } from "../context/AuthContext";
 
 export function useActivityFeed(
@@ -50,16 +50,16 @@ export function useActivityFeed(
 
     loadCatchup();
 
-    const socket = createFeedSocket(token);
+    const socket = getFeedSocket(token);
     socketRef.current = socket;
 
-    socket.on("connect", () => {
+    const handleConnect = () => {
       if (isMounted) {
         setConnected(true);
         setError(null);
       }
 
-      if (projectId) {
+      if (projectId && socket.connected) {
         socket.emit(
           "feed:subscribe:project",
           { projectId },
@@ -70,15 +70,15 @@ export function useActivityFeed(
           }
         );
       }
-    });
+    };
 
-    socket.on("presence:count", (data: { onlineCount: number }) => {
+    const handlePresence = (data: { onlineCount: number }) => {
       if (isMounted && typeof data?.onlineCount === "number") {
         setOnlineCount(data.onlineCount);
       }
-    });
+    };
 
-    socket.on("feed:new", (event: ActivityEvent) => {
+    const handleNewFeed = (event: ActivityEvent) => {
       if (!isMounted) return;
       if (projectId && event.projectId !== projectId) return;
 
@@ -90,27 +90,42 @@ export function useActivityFeed(
       });
 
       onActivityRef.current?.(event);
-    });
+    };
 
-    socket.on("disconnect", () => {
+    const handleDisconnect = () => {
       if (isMounted) {
         setConnected(false);
       }
-    });
+    };
 
-    socket.on("connect_error", (err) => {
+    const handleConnectError = (err: any) => {
       if (isMounted) {
         setConnected(false);
-        setError(err.message || "WebSocket connection error");
+        setError(err?.message || "WebSocket connection error");
       }
-    });
+    };
+
+    if (socket.connected) {
+      handleConnect();
+    }
+
+    socket.on("connect", handleConnect);
+    socket.on("presence:count", handlePresence);
+    socket.on("feed:new", handleNewFeed);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleConnectError);
 
     return () => {
       isMounted = false;
-      if (projectId) {
+      if (projectId && socket.connected) {
         socket.emit("feed:unsubscribe:project", { projectId });
       }
-      socket.disconnect();
+      socket.off("connect", handleConnect);
+      socket.off("presence:count", handlePresence);
+      socket.off("feed:new", handleNewFeed);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleConnectError);
+      releaseFeedSocket();
       socketRef.current = null;
     };
   }, [projectId, token]);

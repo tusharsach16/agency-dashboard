@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Socket } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
-import { createFeedSocket } from "../services/socket";
+import { getFeedSocket, releaseFeedSocket } from "../services/socket";
 import {
   fetchNotifications,
   markNotificationAsRead,
@@ -19,7 +19,10 @@ export function useNotifications() {
   const socketRef = useRef<Socket | null>(null);
 
   const loadNotifications = useCallback(async () => {
-    if (!token) return;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
@@ -40,25 +43,30 @@ export function useNotifications() {
   useEffect(() => {
     if (!token) return;
 
-    const socket = createFeedSocket(token);
+    const socket = getFeedSocket(token);
     socketRef.current = socket;
 
-    socket.on("notification:new", (newNotif: NotificationItem) => {
+    const handleNewNotif = (newNotif: NotificationItem) => {
       setNotifications((prev) => {
         if (prev.some((n) => n.id === newNotif.id)) return prev;
         return [newNotif, ...prev];
       });
       setUnreadCount((prev) => prev + 1);
-    });
+    };
 
-    socket.on("notification:unread_count", (data: { count: number }) => {
+    const handleUnreadCount = (data: { count: number }) => {
       if (typeof data?.count === "number") {
         setUnreadCount(data.count);
       }
-    });
+    };
+
+    socket.on("notification:new", handleNewNotif);
+    socket.on("notification:unread_count", handleUnreadCount);
 
     return () => {
-      socket.disconnect();
+      socket.off("notification:new", handleNewNotif);
+      socket.off("notification:unread_count", handleUnreadCount);
+      releaseFeedSocket();
       socketRef.current = null;
     };
   }, [token]);
@@ -70,7 +78,7 @@ export function useNotifications() {
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
       await markNotificationAsRead(id);
-    } catch (err: any) {
+    } catch {
       loadNotifications();
     }
   };
@@ -80,7 +88,7 @@ export function useNotifications() {
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       setUnreadCount(0);
       await markAllNotificationsAsRead();
-    } catch (err: any) {
+    } catch {
       loadNotifications();
     }
   };

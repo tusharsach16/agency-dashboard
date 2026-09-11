@@ -21,7 +21,7 @@ export function NotificationList({
   onClose,
 }: NotificationListProps) {
   return (
-    <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-card-light dark:bg-card-dark border border-black/10 dark:border-white/10 rounded-2xl shadow-soft-light dark:shadow-soft-dark z-50 overflow-hidden animate-slide-down">
+    <div className="fixed inset-x-3 top-16 sm:absolute sm:inset-auto sm:right-0 sm:top-full sm:mt-3 w-auto sm:w-96 max-w-sm sm:max-w-none mx-auto sm:mx-0 bg-card-light dark:bg-card-dark border border-black/10 dark:border-white/10 rounded-2xl shadow-soft-light dark:shadow-soft-dark z-50 overflow-hidden animate-slide-down">
       <div className="p-4 border-b border-black/10 dark:border-white/10 flex items-center justify-between bg-black/[0.01] dark:bg-white/[0.02]">
         <div className="flex items-center gap-2">
           <h4 className="font-heading font-bold text-sm text-slate-900 dark:text-white">

@@ -20,11 +20,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     async function initAuth() {
+      const hasSession = localStorage.getItem("ag_has_session") === "true";
+      if (!hasSession) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const res = await api.post("/auth/refresh");
         if (res.data?.accessToken) {
           setAccessToken(res.data.accessToken);
           setToken(res.data.accessToken);
+          localStorage.setItem("ag_has_session", "true");
           if (res.data.user) {
             setUser(res.data.user);
           } else {
@@ -33,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch {
+        localStorage.removeItem("ag_has_session");
         setAccessToken(null);
         setToken(null);
         setUser(null);
@@ -46,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function register(name: string, email: string, password: string, role?: string) {
     const res = await api.post("/auth/register", { name, email, password, role });
+    localStorage.setItem("ag_has_session", "true");
     setAccessToken(res.data.accessToken);
     setToken(res.data.accessToken);
     setUser(res.data.user);
@@ -53,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function login(email: string, password: string) {
     const res = await api.post("/auth/login", { email, password });
+    localStorage.setItem("ag_has_session", "true");
     setAccessToken(res.data.accessToken);
     setToken(res.data.accessToken);
     setUser(res.data.user);
@@ -62,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await api.post("/auth/logout");
     } finally {
+      localStorage.removeItem("ag_has_session");
       setAccessToken(null);
       setToken(null);
       setUser(null);
