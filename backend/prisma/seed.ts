@@ -5,6 +5,15 @@ import process from "node:process";
 const prisma = new PrismaClient();
 
 async function main() {
+  const existingAdmin = await prisma.user.findUnique({
+    where: { email: "admin@agency.dev" },
+  });
+
+  if (existingAdmin) {
+    console.log("Seed data already present in database, skipping.");
+    return;
+  }
+
   const password = await bcrypt.hash("password123", 10);
 
   const admin = await prisma.user.create({
