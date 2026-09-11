@@ -10,7 +10,7 @@ const REFRESH_COOKIE_NAME = "refreshToken";
 const cookieOptions = {
   httpOnly: true,
   secure: env.nodeEnv === "production",
-  sameSite: "lax" as const,
+  sameSite: (env.nodeEnv === "production" ? "none" : "lax") as "none" | "lax",
   path: "/api/auth",
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
@@ -132,7 +132,12 @@ export async function logout(req: Request, res: Response, next: NextFunction) {
     if (token) {
       await prisma.refreshToken.deleteMany({ where: { token } });
     }
-    res.clearCookie(REFRESH_COOKIE_NAME, { path: "/api/auth" });
+    res.clearCookie(REFRESH_COOKIE_NAME, {
+      httpOnly: true,
+      secure: env.nodeEnv === "production",
+      sameSite: (env.nodeEnv === "production" ? "none" : "lax") as "none" | "lax",
+      path: "/api/auth",
+    });
     res.json({ success: true, message: "Logged out successfully" });
   } catch (err) {
     next(err);
