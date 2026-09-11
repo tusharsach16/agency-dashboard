@@ -4,6 +4,7 @@ import { AuthedSocket } from "../types/activity";
 import { socketAuthMiddleware } from "./auth.socket";
 import { joinUserRooms, registerProjectRoomHandlers } from "./project-room.socket";
 import { registerActivityHandlers } from "./activity.socket";
+import { env } from "../config/env";
 
 let ioInstance: Server | null = null;
 
@@ -13,7 +14,7 @@ export function getIO(): Server | null {
 
 export function initSockets(httpServer: HttpServer): Server {
   const io = new Server(httpServer, {
-    cors: { origin: "*", credentials: true },
+    cors: { origin: env.clientOrigin, credentials: true },
   });
 
   ioInstance = io;
