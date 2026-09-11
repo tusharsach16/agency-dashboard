@@ -42,6 +42,7 @@ export default function DashboardPage() {
     connected: activityConnected,
     loading: activityLoading,
     error: activityError,
+    onlineCount,
   } = useActivityFeed(selectedProjectId, (event) => {
     if (event.field === "status" && event.toValue) {
       setTasks((prev) =>
@@ -314,7 +315,7 @@ export default function DashboardPage() {
             </div>
           )}
 
-          <DashboardStats stats={stats} loading={loading} role={user?.role} />
+          <DashboardStats stats={stats} loading={loading} role={user?.role} onlineCount={onlineCount} />
 
           <DashboardFilters
             filters={filters}

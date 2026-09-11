@@ -4,6 +4,7 @@ import { AuthedSocket } from "../types/activity";
 import { socketAuthMiddleware } from "./auth.socket";
 import { joinUserRooms, registerProjectRoomHandlers } from "./project-room.socket";
 import { registerActivityHandlers } from "./activity.socket";
+import { registerPresenceHandlers } from "./presence.socket";
 import { env } from "../config/env";
 
 let ioInstance: Server | null = null;
@@ -22,6 +23,7 @@ export function initSockets(httpServer: HttpServer): Server {
   io.use(socketAuthMiddleware);
 
   io.on("connection", async (socket: AuthedSocket) => {
+    registerPresenceHandlers(io, socket);
     await joinUserRooms(socket);
     registerProjectRoomHandlers(socket);
     registerActivityHandlers(socket);

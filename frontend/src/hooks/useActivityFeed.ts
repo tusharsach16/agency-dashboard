@@ -14,6 +14,7 @@ export function useActivityFeed(
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [onlineCount, setOnlineCount] = useState<number | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const onActivityRef = useRef(onActivity);
   onActivityRef.current = onActivity;
@@ -71,6 +72,12 @@ export function useActivityFeed(
       }
     });
 
+    socket.on("presence:count", (data: { onlineCount: number }) => {
+      if (isMounted && typeof data?.onlineCount === "number") {
+        setOnlineCount(data.onlineCount);
+      }
+    });
+
     socket.on("feed:new", (event: ActivityEvent) => {
       if (!isMounted) return;
       if (projectId && event.projectId !== projectId) return;
@@ -108,5 +115,5 @@ export function useActivityFeed(
     };
   }, [projectId, token]);
 
-  return { events, connected, loading, error };
+  return { events, connected, loading, error, onlineCount };
 }

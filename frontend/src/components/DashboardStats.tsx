@@ -4,15 +4,17 @@ interface DashboardStatsProps {
   stats: StatsType | null;
   loading: boolean;
   role?: Role;
+  onlineCount?: number | null;
 }
 
-export function DashboardStats({ stats, loading, role }: DashboardStatsProps) {
+export function DashboardStats({ stats, loading, role, onlineCount }: DashboardStatsProps) {
   const isDeveloper = role === "DEVELOPER";
+  const isAdmin = role === "ADMIN";
 
   if (loading && !stats) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {[1, 2, 3, 4].map((i) => (
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${isAdmin ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-4 mb-6`}>
+        {(isAdmin ? [1, 2, 3, 4, 5] : [1, 2, 3, 4]).map((i) => (
           <div
             key={i}
             className="h-32 bg-card-light dark:bg-card-dark border border-black/10 dark:border-white/10 rounded-2xl animate-pulse"
@@ -27,9 +29,10 @@ export function DashboardStats({ stats, loading, role }: DashboardStatsProps) {
   const totalTasks = stats.totalTasks || 0;
   const doneTasks = stats.statusBreakdown.DONE || 0;
   const progressPercent = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+  const displayOnlineCount = typeof onlineCount === "number" ? onlineCount : 1;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div className={`grid grid-cols-1 sm:grid-cols-2 ${isAdmin ? "lg:grid-cols-5" : "lg:grid-cols-4"} gap-4 mb-6`}>
       <div className="bg-card-light dark:bg-card-dark border border-black/10 dark:border-white/10 rounded-2xl p-5 shadow-soft-light dark:shadow-soft-dark transition-all hover:border-black/20 dark:hover:border-white/20">
         <div className="flex items-center justify-between">
           <span className="text-xs font-heading font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -105,6 +108,36 @@ export function DashboardStats({ stats, loading, role }: DashboardStatsProps) {
           {stats.overdueTasks > 0 ? "Requires immediate attention" : "All deliverables on schedule"}
         </p>
       </div>
+
+      {isAdmin && (
+        <div className="bg-card-light dark:bg-card-dark border border-emerald-500/20 dark:border-emerald-500/20 rounded-2xl p-5 shadow-soft-light dark:shadow-soft-dark transition-all hover:border-emerald-500/40 dark:hover:border-emerald-500/40">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-heading font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Active Users
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+            </div>
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="font-heading font-extrabold text-3xl text-slate-900 dark:text-white">
+              {displayOnlineCount}
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-live" />
+              Online
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            active users online right now
+          </p>
+        </div>
+      )}
 
       <div className="bg-card-light dark:bg-card-dark border border-black/10 dark:border-white/10 rounded-2xl p-5 shadow-soft-light dark:shadow-soft-dark transition-all hover:border-black/20 dark:hover:border-white/20">
         <div className="flex items-center justify-between mb-3">
